@@ -67,7 +67,7 @@ internal final class USBDaemonSocket: Daemon {
     }
     
     private func configure(socketHandle: CFSocketNativeHandle) {
-        var on: Int = Int(true)
+        var on: Int = Int(truncating: true)
         setsockopt(socketHandle, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int>.size))
         setsockopt(socketHandle, SOL_SOCKET, SO_REUSEADDR, &on, socklen_t(MemoryLayout<Int>.size))
         setsockopt(socketHandle, SOL_SOCKET, SO_REUSEPORT, &on, socklen_t(MemoryLayout<Int>.size))
@@ -75,13 +75,14 @@ internal final class USBDaemonSocket: Daemon {
     
     // MARK: Daemon
     
+    private var tempAddr : sockaddr_un? = nil
     internal func start() {
         if handle.rawValue == CFSocketInvalidHandle {
             let socketHandle = socket(AF_UNIX, SOCK_STREAM, 0)
             if socketHandle != CFSocketInvalidHandle {
                 configure(socketHandle: socketHandle)
-                var addr = self.addr()
-                let result = withUnsafeMutablePointer(to: &addr) {
+                tempAddr = self.addr()
+                let result = withUnsafeMutablePointer(to: &tempAddr) {
                     $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                         connect(socketHandle, $0, socklen_t(MemoryLayout.size(ofValue: addr)))
                     }
